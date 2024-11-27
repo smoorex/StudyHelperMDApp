@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "943907122162",
+    "project_id": "studyhelper-e0d01",
+    "storage_bucket": "studyhelper-e0d01.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:943907122162:android:af4c4045ac34ee8a7d596b",
+        "android_client_info": {
+          "package_name": "com.example.studyhelpermdapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqJtn9o-LBTA09loqbLJ9g67nj3SixhaM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
