@@ -12,7 +12,7 @@ class MyApplication : Application() {
             FirebaseApp.initializeApp(this)
             Log.d("MyApplication", "Firebase initialized successfully")
         } catch (e: Exception) {
-            Log.e("MyApplication", "Firebase initialization failed", e)
+            Log.e("MyApplication", "Failed to initialize Firebase: ${e.message}")
         }
     }
 }

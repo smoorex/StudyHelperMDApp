@@ -1,5 +1,6 @@
 package com.example.studyhelpermdapp
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,8 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 
 class SettingsActivity : ComponentActivity() {
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -23,7 +27,14 @@ class SettingsActivity : ComponentActivity() {
                 EnhancedSettingsScreen(
                     onSave = { /* Handle Save Changes */ },
                     onReset = { /* Handle Reset Settings */ },
-                    onLogout = { /* Handle Logout */ }
+                    onLogout = {
+                        // Log out the user
+                        auth.signOut()
+                        // Redirect to LoginActivity
+                        val intent = Intent(this, LoginActivity::class.java)
+                        startActivity(intent)
+                        finish()
+                    }
                 )
             }
         }

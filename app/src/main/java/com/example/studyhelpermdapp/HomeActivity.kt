@@ -7,15 +7,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
@@ -27,6 +23,13 @@ data class Task(
     val date: String = ""
 )
 
+data class StudyGroup(
+    val id: String = "",
+    val name: String = "",
+    val location: String = "",
+    val members: List<String> = emptyList()
+)
+
 class HomeActivity : ComponentActivity() {
 
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -35,7 +38,6 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Check if the user is logged in
         val currentUser = auth.currentUser
         if (currentUser == null) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -48,6 +50,7 @@ class HomeActivity : ComponentActivity() {
                 HomeScreen(
                     userId = currentUser.uid,
                     onAddTask = { startActivity(Intent(this, TaskManagementActivity::class.java)) },
+                    onCreateGroup = { startActivity(Intent(this, CreateGroupActivity::class.java)) },
                     onSettings = { startActivity(Intent(this, SettingsActivity::class.java)) }
                 )
             }
@@ -56,11 +59,13 @@ class HomeActivity : ComponentActivity() {
 }
 
 @Composable
-fun HomeScreen(userId: String, onAddTask: () -> Unit, onSettings: () -> Unit) {
+fun HomeScreen(userId: String, onAddTask: () -> Unit, onCreateGroup: () -> Unit, onSettings: () -> Unit) {
     val tasks = remember { mutableStateListOf<Task>() }
+    val studyGroups = remember { mutableStateListOf<StudyGroup>() }
     val isLoading = remember { mutableStateOf(true) }
     val database = FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
     val taskRef = database.reference.child("tasks").child(userId)
+    val groupRef = database.reference.child("groups")
 
     LaunchedEffect(Unit) {
         taskRef.addValueEventListener(object : ValueEventListener {
@@ -79,10 +84,24 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onSettings: () -> Unit) {
                 isLoading.value = false
             }
         })
+
+        groupRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                studyGroups.clear()
+                for (groupSnapshot in snapshot.children) {
+                    val group = groupSnapshot.getValue(StudyGroup::class.java)
+                    if (group != null) {
+                        studyGroups.add(group)
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {}
+        })
     }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Upcoming Tasks", style = MaterialTheme.typography.headlineSmall, fontSize = 24.sp)
+        Text("Welcome to Study Planner", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
         if (isLoading.value) {
@@ -90,30 +109,23 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onSettings: () -> Unit) {
         } else {
             LazyColumn(modifier = Modifier.weight(1f)) {
                 items(tasks) { task -> TaskItem(task) }
+                items(studyGroups) { group -> StudyGroupItem(group) }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = onAddTask,
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(12.dp)
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Add Task")
-            Spacer(modifier = Modifier.width(8.dp))
+        Button(onClick = onAddTask, modifier = Modifier.fillMaxWidth()) {
             Text("Add New Task")
         }
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = onCreateGroup, modifier = Modifier.fillMaxWidth()) {
+            Text("Create Study Group")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = onSettings,
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(12.dp)
-        ) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings")
-            Spacer(modifier = Modifier.width(8.dp))
+        Button(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
             Text("Settings")
         }
     }
@@ -124,15 +136,25 @@ fun TaskItem(task: Task) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .padding(8.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Task: ${task.taskName}", style = MaterialTheme.typography.bodyLarge)
-            Text("Description: ${task.description}", style = MaterialTheme.typography.bodyMedium)
-            Text("Category: ${task.category}", style = MaterialTheme.typography.bodyMedium)
-            Text("Priority: ${task.priority}", style = MaterialTheme.typography.bodyMedium)
             Text("Date: ${task.date}", style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun StudyGroupItem(group: StudyGroup) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("Group: ${group.name}", style = MaterialTheme.typography.bodyLarge)
+            Text("Location: ${group.location}", style = MaterialTheme.typography.bodySmall)
         }
     }
 }

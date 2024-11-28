@@ -66,6 +66,11 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-database-ktx")
 
+    implementation ("com.google.maps.android:maps-compose:2.11.1")
+    implementation ("com.google.android.gms:play-services-maps:18.0.2")
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
+
+
     // Test dependencies
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -74,6 +79,8 @@ dependencies {
     // Debug dependencies
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+
 }
 
 
