@@ -28,9 +28,8 @@ class HomeActivity : ComponentActivity() {
         // Check if the user is logged in
         val currentUser = auth.currentUser
         if (currentUser == null) {
-            // Redirect to login activity if the user is not logged in
-            // Intent to LoginActivity (you need to create this)
-            // startActivity(Intent(this, LoginActivity::class.java))
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
             return
         }
 
@@ -51,7 +50,6 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onSettings: () -> Unit) {
     val database = FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
     val taskRef = database.reference.child("tasks").child(userId)
 
-    // Fetch tasks from Firebase for the specific user
     LaunchedEffect(Unit) {
         taskRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -99,9 +97,7 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onSettings: () -> Unit) {
 
 @Composable
 fun TaskItem(task: Task) {
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(8.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Text("Task: ${task.taskName}", style = MaterialTheme.typography.bodyLarge)
         Text("Date: ${task.date}", style = MaterialTheme.typography.bodySmall)
     }

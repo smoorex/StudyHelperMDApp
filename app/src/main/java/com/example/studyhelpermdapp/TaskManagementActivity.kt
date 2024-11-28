@@ -32,8 +32,9 @@ class TaskManagementActivity : ComponentActivity() {
         val currentUser = auth.currentUser
         if (currentUser == null) {
             // Redirect to login activity if the user is not logged in
-            // Intent to LoginActivity (you need to create this)
-            // startActivity(Intent(this, LoginActivity::class.java))
+            val intent = Intent(this, LoginActivity::class.java)
+            startActivity(intent)
+            finish()
             return
         }
 
@@ -58,36 +59,24 @@ class TaskManagementActivity : ComponentActivity() {
             return
         }
 
-        Log.d("TaskManagementActivity", "Attempting to add task: Name=$taskName, Date=$date")
         if (taskName.isBlank() || date.isBlank()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
-            Log.e("TaskManagementActivity", "Task name or date is blank.")
             return
         }
 
         val taskRef = database.reference.child("tasks").child(userId).push()
-
-        val taskData = mapOf(
-            "taskName" to taskName,
-            "date" to date
-        )
+        val taskData = mapOf("taskName" to taskName, "date" to date)
 
         taskRef.setValue(taskData).addOnCompleteListener { task ->
             if (task.isSuccessful) {
                 Toast.makeText(this, "Task added successfully!", Toast.LENGTH_SHORT).show()
-                Log.d("TaskManagementActivity", "Task added successfully to Firebase.")
-
-                // Navigate to HomeActivity after adding the task
-                val intent = Intent(this, HomeActivity::class.java)
-                startActivity(intent)
+                startActivity(Intent(this, HomeActivity::class.java))
+                finish()
             } else {
-                val exceptionMessage = task.exception?.message ?: "Unknown error"
-                Toast.makeText(this, "Failed to add task: $exceptionMessage", Toast.LENGTH_SHORT).show()
-                Log.e("TaskManagementActivity", "Error adding task: $exceptionMessage", task.exception)
+                Toast.makeText(this, "Failed to add task: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
             }
         }.addOnFailureListener { exception ->
             Toast.makeText(this, "Task write failed: ${exception.message}", Toast.LENGTH_SHORT).show()
-            Log.e("TaskManagementActivity", "Task write failed: ${exception.message}", exception)
         }
     }
 }
@@ -136,12 +125,7 @@ fun TaskManagementScreen(onAddTask: (String, String) -> Unit) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Button(
-            onClick = {
-                onAddTask(taskName, date)
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Button(onClick = { onAddTask(taskName, date) }, modifier = Modifier.fillMaxWidth()) {
             Text("Add Task")
         }
     }
