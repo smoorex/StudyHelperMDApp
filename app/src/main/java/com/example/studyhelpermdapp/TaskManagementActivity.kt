@@ -38,11 +38,10 @@ class TaskManagementActivity : ComponentActivity() {
             return
         }
 
-        // Set the Compose UI content for Task Management
+        // Set the Compose UI content for Enhanced Task Management
         setContent {
-            TaskManagementScreen { taskName, date ->
-                Log.d("TaskManagementActivity", "Add Task Button Clicked")
-                addTaskToFirebase(currentUser.uid, taskName, date)
+            EnhancedTaskManagementScreen { taskName, description, category, priority, date ->
+                addTaskToFirebase(currentUser.uid, taskName, description, category, priority, date)
             }
         }
     }
@@ -53,19 +52,25 @@ class TaskManagementActivity : ComponentActivity() {
         return activeNetwork?.isConnectedOrConnecting == true
     }
 
-    private fun addTaskToFirebase(userId: String, taskName: String, date: String) {
+    private fun addTaskToFirebase(userId: String, taskName: String, description: String, category: String, priority: String, date: String) {
         if (!isNetworkAvailable()) {
             Toast.makeText(this, "No network connection. Cannot add task.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (taskName.isBlank() || date.isBlank()) {
+        if (taskName.isBlank() || description.isBlank() || category.isBlank() || priority.isBlank() || date.isBlank()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
             return
         }
 
         val taskRef = database.reference.child("tasks").child(userId).push()
-        val taskData = mapOf("taskName" to taskName, "date" to date)
+        val taskData = mapOf(
+            "taskName" to taskName,
+            "description" to description,
+            "category" to category,
+            "priority" to priority,
+            "date" to date
+        )
 
         taskRef.setValue(taskData).addOnCompleteListener { task ->
             if (task.isSuccessful) {
@@ -82,8 +87,11 @@ class TaskManagementActivity : ComponentActivity() {
 }
 
 @Composable
-fun TaskManagementScreen(onAddTask: (String, String) -> Unit) {
+fun EnhancedTaskManagementScreen(onAddTask: (String, String, String, String, String) -> Unit) {
     var taskName by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf("") }
+    var priority by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
@@ -95,9 +103,28 @@ fun TaskManagementScreen(onAddTask: (String, String) -> Unit) {
             label = { Text("Task Name") },
             modifier = Modifier.fillMaxWidth()
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Description") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = category,
+            onValueChange = { category = it },
+            label = { Text("Category") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(
+            value = priority,
+            onValueChange = { priority = it },
+            label = { Text("Priority (e.g., Low, Medium, High)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = date,
             onValueChange = { date = it },
@@ -105,9 +132,7 @@ fun TaskManagementScreen(onAddTask: (String, String) -> Unit) {
             modifier = Modifier.fillMaxWidth(),
             readOnly = true
         )
-
         Spacer(modifier = Modifier.height(8.dp))
-
         Button(onClick = {
             DatePickerDialog(
                 context,
@@ -122,10 +147,11 @@ fun TaskManagementScreen(onAddTask: (String, String) -> Unit) {
         }) {
             Text("Select Date")
         }
-
         Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = { onAddTask(taskName, date) }, modifier = Modifier.fillMaxWidth()) {
+        Button(
+            onClick = { onAddTask(taskName, description, category, priority, date) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text("Add Task")
         }
     }

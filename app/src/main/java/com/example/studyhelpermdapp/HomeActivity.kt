@@ -15,7 +15,13 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
-data class Task(val taskName: String = "", val date: String = "")
+data class Task(
+    val taskName: String = "",
+    val description: String = "",
+    val category: String = "",
+    val priority: String = "",
+    val date: String = ""
+)
 
 class HomeActivity : ComponentActivity() {
 
@@ -99,6 +105,9 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onSettings: () -> Unit) {
 fun TaskItem(task: Task) {
     Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
         Text("Task: ${task.taskName}", style = MaterialTheme.typography.bodyLarge)
+        Text("Description: ${task.description}", style = MaterialTheme.typography.bodyMedium)
+        Text("Category: ${task.category}", style = MaterialTheme.typography.bodyMedium)
+        Text("Priority: ${task.priority}", style = MaterialTheme.typography.bodyMedium)
         Text("Date: ${task.date}", style = MaterialTheme.typography.bodySmall)
     }
 }
