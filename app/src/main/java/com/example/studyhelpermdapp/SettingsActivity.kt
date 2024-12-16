@@ -25,7 +25,7 @@ class SettingsActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 EnhancedSettingsScreen(
-                    onSave = { /* Handle Save Changes */ },
+                    onSave = { /* Handle Save Changes */ }, //expand this !!
                     onReset = { /* Handle Reset Settings */ },
                     onLogout = {
                         // Log out the user

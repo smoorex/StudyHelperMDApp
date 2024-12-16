@@ -23,12 +23,7 @@ data class Task(
     val date: String = ""
 )
 
-data class StudyGroup(
-    val id: String = "",
-    val name: String = "",
-    val location: String = "",
-    val members: List<String> = emptyList()
-)
+
 
 class HomeActivity : ComponentActivity() {
 
