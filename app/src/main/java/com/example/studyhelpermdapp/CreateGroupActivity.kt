@@ -75,6 +75,10 @@ class CreateGroupActivity : ComponentActivity() {
         database.reference.child("study_groups").child(groupId).setValue(group)
             .addOnSuccessListener {
                 Toast.makeText(this, "Group created successfully!", Toast.LENGTH_SHORT).show()
+                // Navigate back to the Home screen
+                val intent = Intent(this, HomeActivity::class.java)
+                startActivity(intent)
+                finish()
             }
             .addOnFailureListener {
                 Toast.makeText(this, "Failed to create group. Try again.", Toast.LENGTH_SHORT).show()
