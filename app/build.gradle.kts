@@ -59,6 +59,8 @@ dependencies {
     implementation("androidx.compose.foundation:foundation:1.5.3")
     implementation("androidx.activity:activity-compose:1.7.2")
     implementation("androidx.compose.material:material-icons-extended:1.5.3")
+    implementation ("com.google.android.libraries.places:places:2.6.0")
+
 
     // Firebase dependencies
     implementation(platform("com.google.firebase:firebase-bom:33.6.0"))
