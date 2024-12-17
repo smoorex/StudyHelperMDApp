@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 
+// Data class representing a Task with default values for Firebase deserialization
 data class Task(
     val taskName: String = "",
     val description: String = "",
@@ -24,10 +25,9 @@ data class Task(
     val date: String = ""
 )
 
-
-
 class HomeActivity : ComponentActivity() {
 
+    // Firebase authentication and database references
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val database: FirebaseDatabase =
         FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
@@ -35,6 +35,7 @@ class HomeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Check if the user is logged in; redirect to LoginActivity if not
         val currentUser = auth.currentUser
         if (currentUser == null) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -42,13 +43,23 @@ class HomeActivity : ComponentActivity() {
             return
         }
 
+        // Set up the UI using Jetpack Compose
         setContent {
             MaterialTheme {
                 HomeScreen(
-                    userId = currentUser.uid,
-                    onAddTask = { startActivity(Intent(this, TaskManagementActivity::class.java)) },
-                    onCreateGroup = { startActivity(Intent(this, CreateGroupActivity::class.java)) },
-                    onSettings = { startActivity(Intent(this, SettingsActivity::class.java)) }
+                    userId = currentUser.uid, // Pass user ID to the HomeScreen
+                    onAddTask = {
+                        // Open TaskManagementActivity when "Add New Task" is clicked
+                        startActivity(Intent(this, TaskManagementActivity::class.java))
+                    },
+                    onCreateGroup = {
+                        // Open CreateGroupActivity when "Create Study Group" is clicked
+                        startActivity(Intent(this, CreateGroupActivity::class.java))
+                    },
+                    onSettings = {
+                        // Open SettingsActivity when "Settings" is clicked
+                        startActivity(Intent(this, SettingsActivity::class.java))
+                    }
                 )
             }
         }
@@ -57,42 +68,46 @@ class HomeActivity : ComponentActivity() {
 
 @Composable
 fun HomeScreen(userId: String, onAddTask: () -> Unit, onCreateGroup: () -> Unit, onSettings: () -> Unit) {
+    // State variables to hold tasks, study groups, and loading status
     val tasks = remember { mutableStateListOf<Task>() }
     val studyGroups = remember { mutableStateListOf<StudyGroup>() }
     val userEmails = remember { mutableStateMapOf<String, String>() }
     val isLoading = remember { mutableStateOf(true) }
+
+    // Firebase references for tasks and study groups
     val database =
         FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
     val taskRef = database.reference.child("tasks").child(userId)
     val groupRef = database.reference.child("study_groups")
 
+    // Fetch tasks and groups when the screen is launched
     LaunchedEffect(Unit) {
-        // Fetch tasks
+        // Fetch tasks from Firebase
         taskRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                tasks.clear()
+                tasks.clear() // Clear previous task list
                 for (taskSnapshot in snapshot.children) {
                     val task = taskSnapshot.getValue(Task::class.java)
                     if (task != null) {
-                        tasks.add(task)
+                        tasks.add(task) // Add new task to the list
                     }
                 }
-                isLoading.value = false
+                isLoading.value = false // Stop the loading indicator
             }
 
             override fun onCancelled(error: DatabaseError) {
-                isLoading.value = false
+                isLoading.value = false // Stop loading on error
             }
         })
 
-        // Fetch study groups
+        // Fetch study groups from Firebase
         groupRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                studyGroups.clear()
+                studyGroups.clear() // Clear previous groups
                 for (groupSnapshot in snapshot.children) {
                     val group = groupSnapshot.getValue(StudyGroup::class.java)
                     if (group != null && group.members.contains(userId)) {
-                        studyGroups.add(group)
+                        studyGroups.add(group) // Add group if the user is a member
                     }
                 }
             }
@@ -101,31 +116,37 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onCreateGroup: () -> Unit,
         })
     }
 
+    // Layout for the home screen
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Text("Welcome to Study Planner", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Show a loading indicator while fetching data
         if (isLoading.value) {
             CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
         } else {
+            // Display tasks and study groups in a list
             LazyColumn(modifier = Modifier.weight(1f)) {
-                items(tasks) { task -> TaskItem(task) }
-                items(studyGroups) { group -> StudyGroupItem(group, userEmails) }
+                items(tasks) { task -> TaskItem(task) } // Show each task
+                items(studyGroups) { group -> StudyGroupItem(group, userEmails) } // Show each study group
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Button to add a new task
         Button(onClick = onAddTask, modifier = Modifier.fillMaxWidth()) {
             Text("Add New Task")
         }
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Button to create a new study group
         Button(onClick = onCreateGroup, modifier = Modifier.fillMaxWidth()) {
             Text("Create Study Group")
         }
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Button to open settings
         Button(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
             Text("Settings")
         }
@@ -134,6 +155,7 @@ fun HomeScreen(userId: String, onAddTask: () -> Unit, onCreateGroup: () -> Unit,
 
 @Composable
 fun TaskItem(task: Task) {
+    // Display a task inside a card with its name and date
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -148,6 +170,7 @@ fun TaskItem(task: Task) {
 
 @Composable
 fun StudyGroupItem(group: StudyGroup, userEmails: MutableMap<String, String>) {
+    // Toggle to show/hide group members
     val showMembers = remember { mutableStateOf(false) }
 
     Card(
@@ -157,7 +180,7 @@ fun StudyGroupItem(group: StudyGroup, userEmails: MutableMap<String, String>) {
             .clickable {
                 showMembers.value = !showMembers.value
                 if (showMembers.value) {
-                    fetchEmailsForMembers(group.members, userEmails)
+                    fetchEmailsForMembers(group.members, userEmails) // Fetch emails for members
                 }
             }
     ) {
@@ -165,12 +188,13 @@ fun StudyGroupItem(group: StudyGroup, userEmails: MutableMap<String, String>) {
             Text("Group: ${group.name}", style = MaterialTheme.typography.bodyLarge)
             Text("Location: ${group.location}", style = MaterialTheme.typography.bodySmall)
 
+            // Display member list if showMembers is true
             if (showMembers.value) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("Members:", style = MaterialTheme.typography.titleSmall)
                 Column {
                     group.members.forEach { memberId ->
-                        val email = userEmails[memberId] ?: "Fetching..."
+                        val email = userEmails[memberId] ?: "Fetching..." // Show email or placeholder
                         Text("- $email", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -179,13 +203,14 @@ fun StudyGroupItem(group: StudyGroup, userEmails: MutableMap<String, String>) {
     }
 }
 
+// Fetch placeholder emails for group members (replace with actual fetching logic if needed)
 fun fetchEmailsForMembers(
     memberIds: List<String>,
     userEmails: MutableMap<String, String>
 ) {
     memberIds.forEach { memberId ->
         if (!userEmails.containsKey(memberId)) {
-            userEmails[memberId] = "email-for-$memberId@example.com" // Placeholder or implement email fetching logic
+            userEmails[memberId] = "email-for-$memberId@example.com" // Placeholder email
         }
     }
 }
