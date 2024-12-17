@@ -32,7 +32,7 @@ class CreateGroupActivity : ComponentActivity() {
     private val database = FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
 
     // API Key for Google Places (replace with your own API key)
-    private val placesApiKey = "YOUR_PLACES_API_KEY"
+    private val placesApiKey = "AIzaSyAc9IwSORGYGrI75QgwasyrsFBe3HykIes"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
