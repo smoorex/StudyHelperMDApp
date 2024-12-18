@@ -31,7 +31,7 @@ class CreateGroupActivity : ComponentActivity() {
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
 
-    // API Key for Google Places (replace with your own API key)
+
     private val placesApiKey = "AIzaSyAc9IwSORGYGrI75QgwasyrsFBe3HykIes"
 
     override fun onCreate(savedInstanceState: Bundle?) {
