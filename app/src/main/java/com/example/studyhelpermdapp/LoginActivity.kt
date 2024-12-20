@@ -15,30 +15,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 
-/**
- * LoginActivity:
- * This activity allows users to log in using their email and password.
- * It uses Firebase Authentication for user verification.
- */
 class LoginActivity : ComponentActivity() {
 
-    // Firebase Authentication instance
     private lateinit var mAuth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Firebase Authentication
         mAuth = FirebaseAuth.getInstance()
 
-        // Set the UI content using Jetpack Compose
         setContent {
             MaterialTheme {
                 LoginScreen(
@@ -49,40 +43,27 @@ class LoginActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * loginUser:
-     * Attempts to log the user in using the provided email and password.
-     * Shows a success message and navigates to the Home screen on success,
-     * or an error message on failure.
-     */
     private fun loginUser(email: String, password: String) {
-        // Check if fields are empty
         if (email.isEmpty() || password.isEmpty()) {
             Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Firebase sign-in with email and password
         mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(this) { task ->
             if (task.isSuccessful) {
-                // Navigate to HomeActivity if login is successful
                 startActivity(Intent(this, HomeActivity::class.java))
-                finish() // Close the LoginActivity
+                finish()
             } else {
-                // Show error message if authentication fails
                 Toast.makeText(this, "Authentication failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    /**
-     * navigateToSignup:
-     * Navigates the user to the SignupActivity to create a new account.
-     */
     private fun navigateToSignup() {
         startActivity(Intent(this, SignupActivity::class.java))
     }
 }
+
 
 /**
  * LoginScreen:
@@ -93,73 +74,88 @@ class LoginActivity : ComponentActivity() {
  */
 @Composable
 fun LoginScreen(onLogin: (String, String) -> Unit, onSignup: () -> Unit) {
-    // State variables for email and password fields
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
 
-    // Column layout for login screen
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.Center, // Align content in the center vertically
-        horizontalAlignment = Alignment.CenterHorizontally // Align content in the center horizontally
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // App Logo
         Image(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with your app logo
+            painter = painterResource(id = R.drawable.ic_launcher_foreground), // Replace with app logo
             contentDescription = "App Logo",
             modifier = Modifier
-                .size(100.dp)
+                .size(120.dp)
                 .padding(bottom = 32.dp)
         )
 
-        // App Title
+        // Welcome Text
         Text(
-            text = "Welcome Back!", // Title text
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 16.dp)
+            text = "Welcome Back!",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Text(
+            text = "Please login to continue",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(bottom = 24.dp)
         )
 
         // Email Input Field
         OutlinedTextField(
-            value = email, // Current value of the email field
-            onValueChange = { email = it }, // Update the email state on change
+            value = email,
+            onValueChange = { email = it },
             label = { Text("Email") },
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") }, // Icon for email
+            leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email Icon") },
             modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email) // Set keyboard type to Email
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         // Password Input Field
         OutlinedTextField(
-            value = password, // Current value of the password field
-            onValueChange = { password = it }, // Update the password state on change
+            value = password,
+            onValueChange = { password = it },
             label = { Text("Password") },
-            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password Icon") }, // Icon for password
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password Icon") },
             modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(), // Hide password text
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password) // Set keyboard type to Password
+            visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    Icon(
+                        painter = painterResource(
+                            id = if (isPasswordVisible) R.drawable.ic_visibility else R.drawable.ic_visibility_off
+                        ),
+                        contentDescription = "Toggle Password Visibility"
+                    )
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
         Spacer(modifier = Modifier.height(24.dp))
 
         // Login Button
         Button(
-            onClick = { onLogin(email, password) }, // Call the onLogin lambda with email and password
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(16.dp) // Add padding to button content
+            onClick = { onLogin(email, password) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            contentPadding = PaddingValues(16.dp)
         ) {
             Text("Login", fontSize = 18.sp)
         }
         Spacer(modifier = Modifier.height(16.dp))
 
         // Navigate to Signup Button
-        TextButton(
-            onClick = onSignup, // Call the onSignup lambda to navigate to signup screen
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text("Don't have an account? Sign Up")
+        TextButton(onClick = onSignup) {
+            Text("Don't have an account? Sign Up", color = MaterialTheme.colorScheme.primary)
         }
     }
 }
+

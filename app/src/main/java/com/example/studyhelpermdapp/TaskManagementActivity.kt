@@ -2,19 +2,16 @@ package com.example.studyhelpermdapp
 
 import android.app.DatePickerDialog
 import android.content.Intent
-import android.net.ConnectivityManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.* // Layout components
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.auth.FirebaseAuth
@@ -22,22 +19,22 @@ import com.google.firebase.database.FirebaseDatabase
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * TaskManagementActivity:
- * This activity allows users to create and save tasks with details such as name, description,
- * category, priority, and date. Tasks are stored in Firebase Realtime Database.
- */
+data class Task(
+    val id: String = "",
+    val taskName: String = "",
+    val description: String = "",
+    val priority: String = "",
+    val date: String = ""
+)
+
 class TaskManagementActivity : ComponentActivity() {
 
-    // Firebase database and authentication instances
-    private val database: FirebaseDatabase =
-        FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/")
-    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    private val database = FirebaseDatabase.getInstance("https://studyhelper-e0d01-default-rtdb.europe-west1.firebasedatabase.app/").reference
+    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Ensure the user is logged in; otherwise, redirect to LoginActivity
         val currentUser = auth.currentUser
         if (currentUser == null) {
             startActivity(Intent(this, LoginActivity::class.java))
@@ -45,163 +42,186 @@ class TaskManagementActivity : ComponentActivity() {
             return
         }
 
-        // Set up the UI using Jetpack Compose
         setContent {
-            MaterialTheme {
-                EnhancedTaskManagementScreen { taskName, description, category, priority, date ->
-                    // Pass the task data to be added to Firebase
-                    addTaskToFirebase(currentUser.uid, taskName, description, category, priority, date)
+            TaskScreen(
+                onCreateTask = { taskName, description, priority, date ->
+                    createTask(currentUser.uid, taskName, description, priority, date)
+                },
+                onDeleteTask = { task ->
+                    deleteTask(currentUser.uid, task)
+                }
+            )
+        }
+    }
+
+    @Composable
+    fun TaskScreen(
+        onCreateTask: (String, String, String, String) -> Unit,
+        onDeleteTask: (Task) -> Unit
+    ) {
+        val context = LocalContext.current
+        val userId = auth.currentUser?.uid ?: ""
+        var tasks by remember { mutableStateOf(listOf<Task>()) }
+        var taskName by remember { mutableStateOf("") }
+        var description by remember { mutableStateOf("") }
+        var selectedPriority by remember { mutableStateOf("Low") }
+        var selectedDate by remember { mutableStateOf("") }
+
+        LaunchedEffect(Unit) {
+            database.child("tasks").child(userId).get().addOnSuccessListener { snapshot ->
+                tasks = snapshot.children.mapNotNull { taskSnapshot ->
+                    val task = taskSnapshot.getValue(Task::class.java)
+                    task?.copy(id = taskSnapshot.key ?: "")
+                }
+            }
+        }
+
+        Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+            // Input fields for task creation
+            OutlinedTextField(
+                value = taskName,
+                onValueChange = { taskName = it },
+                label = { Text("Task Name") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Dropdown for priority selection
+            Text("Priority Level", style = MaterialTheme.typography.bodyLarge)
+            var expanded by remember { mutableStateOf(false) }
+            Box(modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = { expanded = true }) {
+                    Text(selectedPriority)
+                }
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Low") },
+                            onClick = {
+                                selectedPriority = "Low"
+                                expanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Medium") },
+                            onClick = {
+                                selectedPriority = "Medium"
+                                expanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("High") },
+                            onClick = {
+                                selectedPriority = "High"
+                                expanded = false
+                            }
+                        )
+                    }
+
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Date picker for due date
+            Text("Due Date: $selectedDate", style = MaterialTheme.typography.bodyMedium)
+            Button(onClick = {
+                val calendar = Calendar.getInstance()
+                DatePickerDialog(
+                    context,
+                    { _, year, month, day ->
+                        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                        calendar.set(year, month, day)
+                        selectedDate = dateFormat.format(calendar.time)
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).show()
+            }) {
+                Text("Pick a Date")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Create Task button
+            Button(onClick = {
+                if (taskName.isNotBlank() && description.isNotBlank() && selectedDate.isNotBlank()) {
+                    onCreateTask(taskName, description, selectedPriority, selectedDate)
+                    taskName = ""
+                    description = ""
+                    selectedPriority = "Low"
+                    selectedDate = ""
+                } else {
+                    Toast.makeText(context, "Please complete all fields.", Toast.LENGTH_SHORT).show()
+                }
+            }, modifier = Modifier.fillMaxWidth()) {
+                Text("Create Task")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Display tasks in a LazyColumn
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                items(tasks) { task ->
+                    TaskItem(task, onDeleteTask)
                 }
             }
         }
     }
 
-    /**
-     * addTaskToFirebase:
-     * Saves the task to Firebase Realtime Database under the current user's ID.
-     * Displays a success message on completion or an error message if it fails.
-     *
-     * @param userId User ID for associating the task with the user.
-     * @param taskName The name of the task.
-     * @param description Task description.
-     * @param category Task category.
-     * @param priority Task priority level (Low, Medium, High).
-     * @param date Task due date in the format "yyyy-MM-dd".
-     */
-    private fun addTaskToFirebase(
-        userId: String,
-        taskName: String,
-        description: String,
-        category: String,
-        priority: String,
-        date: String
-    ) {
-        // Validate inputs to ensure no field is left blank
-        if (taskName.isBlank() || description.isBlank() || category.isBlank() || priority.isBlank() || date.isBlank()) {
-            Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+    @Composable
+    fun TaskItem(task: Task, onDelete: (Task) -> Unit) {
+        Card(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Task Name: ${task.taskName}", style = MaterialTheme.typography.bodyLarge)
+                Text("Description: ${task.description}", style = MaterialTheme.typography.bodyMedium)
+                Text("Priority: ${task.priority}", style = MaterialTheme.typography.bodyMedium)
+                Text("Due Date: ${task.date}", style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = { onDelete(task) }, colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)) {
+                    Text(text = "Delete")
+                }
+            }
+        }
+    }
+
+    private fun createTask(userId: String, taskName: String, description: String, priority: String, date: String) {
+        if (taskName.isBlank() || description.isBlank() || date.isBlank()) {
+            Toast.makeText(this, "All fields are required.", Toast.LENGTH_SHORT).show()
             return
         }
 
-        // Reference to the "tasks" node in Firebase under the current user's ID
-        val taskRef = database.reference.child("tasks").child(userId).push()
+        val taskId = System.currentTimeMillis().toString()
+        val task = Task(id = taskId, taskName = taskName, description = description, priority = priority, date = date)
 
-        // Data to save in Firebase
-        val taskData = mapOf(
-            "taskName" to taskName,
-            "description" to description,
-            "category" to category,
-            "priority" to priority,
-            "date" to date
-        )
-
-        // Save the task data to Firebase
-        taskRef.setValue(taskData).addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                // Show success message and navigate to HomeActivity
-                Toast.makeText(this, "Task added successfully!", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this, HomeActivity::class.java))
+        database.child("tasks").child(userId).child(taskId).setValue(task)
+            .addOnSuccessListener {
+                Toast.makeText(this, "Task created successfully!", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, HomeActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
                 finish()
-            } else {
-                // Show error message if saving fails
-                Toast.makeText(this, "Failed to add task.", Toast.LENGTH_SHORT).show()
             }
-        }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to create task.", Toast.LENGTH_SHORT).show()
+            }
     }
-}
 
-/**
- * EnhancedTaskManagementScreen:
- * A composable function that provides the UI for adding a new task.
- *
- * @param onAddTask A lambda function to handle the task submission.
- */
-@Composable
-fun EnhancedTaskManagementScreen(onAddTask: (String, String, String, String, String) -> Unit) {
-    // State variables for task input fields
-    var taskName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
-    var priority by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("") }
-
-    // Context for showing the DatePickerDialog
-    val context = LocalContext.current
-    val calendar = Calendar.getInstance()
-
-    // Layout for the task input form
-    Column(modifier = Modifier.padding(16.dp)) {
-        // Task Name Input Field
-        OutlinedTextField(
-            value = taskName,
-            onValueChange = { taskName = it },
-            label = { Text("Task Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Description Input Field
-        OutlinedTextField(
-            value = description,
-            onValueChange = { description = it },
-            label = { Text("Description") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Category Input Field
-        OutlinedTextField(
-            value = category,
-            onValueChange = { category = it },
-            label = { Text("Category") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Priority Input Field
-        OutlinedTextField(
-            value = priority,
-            onValueChange = { priority = it },
-            label = { Text("Priority (Low, Medium, High)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Task Date Picker Field
-        OutlinedTextField(
-            value = date,
-            onValueChange = { date = it },
-            label = { Text("Task Date") },
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true, // Prevent manual editing
-            trailingIcon = {
-                // Calendar icon to show DatePickerDialog
-                IconButton(onClick = {
-                    DatePickerDialog(
-                        context,
-                        { _, year, month, dayOfMonth ->
-                            calendar.set(year, month, dayOfMonth)
-                            date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.time)
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                    ).show()
-                }) {
-                    Icon(Icons.Default.CalendarToday, contentDescription = "Pick a date")
-                }
+    private fun deleteTask(userId: String, task: Task) {
+        database.child("tasks").child(userId).child(task.id).removeValue()
+            .addOnSuccessListener {
+                Toast.makeText(this, "Task deleted successfully", Toast.LENGTH_SHORT).show()
             }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Save Task Button
-        Button(
-            onClick = { onAddTask(taskName, description, category, priority, date) },
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(12.dp)
-        ) {
-            Icon(Icons.Default.Save, contentDescription = "Save Task") // Save Icon
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Save Task") // Button text
-        }
+            .addOnFailureListener {
+                Toast.makeText(this, "Failed to delete task", Toast.LENGTH_SHORT).show()
+            }
     }
 }

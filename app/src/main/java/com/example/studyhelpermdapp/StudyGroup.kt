@@ -11,8 +11,10 @@ package com.example.studyhelpermdapp
  * @property members List of user IDs representing members of the study group.
  */
 data class StudyGroup(
-    val id: String = "",             // Default value: Empty string for group ID
-    val name: String = "",           // Default value: Empty string for group name
-    val location: String = "",       // Default value: Empty string for group location
-    val members: List<String> = emptyList() // Default value: Empty list for group members
+    val id: String = "",
+    val name: String = "",
+    val location: String = "",
+    val creatorId: String = "", // New field for creator ID
+    val members: List<String> = emptyList()
 )
+
